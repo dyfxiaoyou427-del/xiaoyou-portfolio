@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>导出已修改的注释 — XIAOYOU</title>
+  <style>
+    body { margin: 0; padding: 48px 24px; font: 16px/1.8 system-ui, sans-serif; color: #242424; background: #f6f6f3; }
+    main { max-width: 640px; margin: 0 auto; }
+    h1 { font-size: 28px; font-weight: 500; }
+    button { font: inherit; padding: 12px 24px; border: 1px solid #242424; background: #242424; color: white; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: default; }
+    a { color: inherit; }
+    #status { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>导出已修改的注释</h1>
+    <p>请在之前编辑注释的同一个浏览器中打开本页。此操作会保留原来的注释。</p>
+    <p id="status" role="status">正在检查已保存的注释……</p>
+    <button id="export" type="button" disabled>导出全部注释</button>
+    <p>导出后，把下载的“网站注释备份.json”文件发给我。我会将这些文字写入网站文件，再更新线上作品集，让 HR 也能看到。</p>
+    <p><a href="index.html">返回本地作品集</a></p>
+  </main>
+  <script type="module">
+    import { projects } from './content.mjs';
+
+    const status = document.querySelector('#status');
+    const button = document.querySelector('#export');
+    const object = value => value && typeof value === 'object' && !Array.isArray(value);
+    try {
+      const saved = {};
+      // Read legacy records first; the unified store contains more recent edits.
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (!key?.startsWith('xiaoyou-captions:')) continue;
+        try {
+          const entries = JSON.parse(localStorage.getItem(key));
+          if (object(entries)) saved[key.slice('xiaoyou-captions:'.length)] = entries;
+        } catch { /* Preserve other records if one entry is unreadable. */ }
+      }
+      const unified = JSON.parse(localStorage.getItem('xiaoyou-captions') || '{}');
+      if (object(unified)) {
+        for (const [page, entries] of Object.entries(unified)) {
+          if (object(entries)) saved[page] = { ...saved[page], ...entries };
+        }
+      }
+      const output = {};
+      let count = 0;
+      let unmatched = 0;
+      for (const [page, entries] of Object.entries(saved)) {
+        const filename = page.replaceAll('\\', '/').split('/').pop();
+        const project = projects.find(item => item.file === filename);
+        if (!project || !object(entries)) { unmatched += 1; continue; }
+        for (const [key, text] of Object.entries(entries)) {
+          if (typeof text !== 'string' || !key.startsWith(project.id + '-')) continue;
+          const ordinal = key.slice(project.id.length + 1);
+          if (!/^\d+$/.test(ordinal)) continue;
+          const image = project.images[Number(ordinal)];
+          if (!image) { unmatched += 1; continue; }
+          output[project.id] ||= {};
+          output[project.id][image] = text;
+          count += 1;
+        }
+      }
+      status.textContent = count
+        ? `找到 ${Object.keys(output).length} 个项目、${count} 条注释。请点击下方按钮导出。`
+        : '这里没有找到注释。请用之前编辑注释的浏览器打开同一个本地地址；不要清除浏览器数据。';
+      if (unmatched) status.textContent += '\n部分记录无法对应当前图片，备份文件中会保留原始记录供核对。';
+      button.disabled = count === 0 && Object.keys(saved).length === 0;
+      button.addEventListener('click', () => {
+        const backup = { version: 1, exportedAt: new Date().toISOString(), captions: output, browserRecords: saved };
+        const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = '网站注释备份.json';
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        status.textContent = '已导出，请把“网站注释备份.json”文件发给我。原来的浏览器注释仍然保留。';
+      });
+    } catch {
+      status.textContent = '无法读取浏览器注释，请在原来编辑网站的浏览器里打开本页。不要清除浏览器数据。';
+    }
+  </script>
+</body>
+</html>

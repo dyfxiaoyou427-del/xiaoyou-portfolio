@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.join(root, 'site-dist');
-const htmlFiles = fs.readdirSync(root).filter(name => name.endsWith('.html'));
+const htmlFiles = fs.readdirSync(root).filter(name => name.endsWith('.html') && name !== 'caption-backup.html');
 const assets = new Set(['styles.css', 'script.js', 'favicon.svg', '.nojekyll']);
 
 for (const name of htmlFiles) {

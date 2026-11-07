@@ -43,6 +43,17 @@ http://127.0.0.1:4173/
 
 ## 发布到 GitHub Pages
 
+### 发布图片注释
+
+页面中的“保存注释”仅保存当前浏览器的草稿。要让其他访客看到修改后的文字，需先在原浏览器打开 `http://127.0.0.1:4173/caption-backup.html`，点击“导出全部注释”。保留下载的备份，然后运行：
+
+```powershell
+node scripts/import-captions.mjs "备份文件的完整路径"
+npm run build
+```
+
+核对页面后，将 `captions.json`、生成的页面和相关代码一起提交并推送。`captions.json` 按项目和图片路径记录文字，后续调整图片顺序不会让已发布的注释移到别的图片上。浏览器旧草稿在首次导出时仍按当时保存的图片序号对应，应核对图片内容。发布包不包含本地注释导出工具，也不会上传导出备份中的浏览器原始记录。
+
 项目已经包含 `.github/workflows/pages.yml`。将整个文件夹推送到 GitHub 仓库后，GitHub Actions 会自动运行 `npm run build` 并发布网站。
 
 第一次发布时，在 GitHub 仓库中打开 **Settings → Pages**，将 **Source** 设置为 **GitHub Actions**。之后每次推送到 `master` 或 `main` 分支，网站都会自动更新。

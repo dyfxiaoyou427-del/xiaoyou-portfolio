@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { site, projects, experiments } from '../content.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const publishedCaptions = JSON.parse(fs.readFileSync(path.join(root, 'captions.json'), 'utf8'));
 const esc = value => String(value).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 const asset = value => 'images/' + value.split('/').map(encodeURIComponent).join('/');
 const cover = project => `images/covers/${project.cover}.webp`;
@@ -84,7 +85,9 @@ function projectPage(project, index) {
   const next = projects[(index + 1) % projects.length];
   const imgs = project.images.map((src, i) => {
     if (!fs.existsSync(path.join(root, 'images', src))) throw new Error('Missing image: ' + src);
-    return `<figure class="project-image"><a href="${asset(src)}" data-lightbox data-caption="${esc(project.name)} / ${String(i + 1).padStart(2, '0')}" aria-label="放大查看 ${esc(project.name)} 项目图像 ${i + 1}"><img src="${asset(src)}" loading="lazy" decoding="async" alt="${esc(project.name)} ${esc(project.subtitle)}，项目图像 ${i + 1}"></a><figcaption><span class="mono">${String(i + 1).padStart(2, '0')} / ${String(project.images.length).padStart(2, '0')}</span><span data-caption-key="${project.id}-${i}">${esc(project.subtitle)}</span></figcaption></figure>`;
+    const publishedCaption = publishedCaptions[project.id]?.[src];
+    const caption = typeof publishedCaption === 'string' ? publishedCaption : project.subtitle;
+    return `<figure class="project-image"><a href="${asset(src)}" data-lightbox data-caption="${esc(project.name)} / ${String(i + 1).padStart(2, '0')}" aria-label="放大查看 ${esc(project.name)} 项目图像 ${i + 1}"><img src="${asset(src)}" loading="lazy" decoding="async" alt="${esc(project.name)} ${esc(project.subtitle)}，项目图像 ${i + 1}"></a><figcaption><span class="mono">${String(i + 1).padStart(2, '0')} / ${String(project.images.length).padStart(2, '0')}</span><span data-caption-key="${project.id}-${i}">${esc(caption)}</span></figcaption></figure>`;
   }).join('');
   const detailCover = project.video ? film(project) : project.hideDetailCover ? '' : `<figure class="project-cover"><img src="${cover(project)}" alt="${esc(project.coverAlt)}" fetchpriority="high"></figure>`;
   const extraFilms = (project.videos || []).map(media => film(project, media)).join('');
